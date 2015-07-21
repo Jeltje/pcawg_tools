@@ -115,6 +115,7 @@ def addNumsAndQuals(args, cmd, sample):
 def radia(chrom, args, outputDir, 
           dnaNormalFilename=None, rnaNormalFilename=None, dnaTumorFilename=None, rnaTumorFilename=None,
           dnaNormalFastaFilename=None, rnaNormalFastaFilename=None, dnaTumorFastaFilename=None, rnaTumorFastaFilename=None):
+# TODO: add RNA only option. Should this be an exception?
 
     # python radia.py id chrom [Options]
 
@@ -124,43 +125,22 @@ def radia(chrom, args, outputDir,
     # -q Illumina
     # --disease GBM
 
-    # quadruplets
-    if (rnaNormalFilename != None and rnaTumorFilename != None):
-        cmd = "python %s/radia.py %s %s -n %s -x %s  -t %s -r %s  --dnaNormalFasta %s --rnaNormalFasta %s --dnaTumorFasta %s --rnaTumorFasta %s " %(
+    cmd = "python %s/radia.py %s %s" %(
                 args.scriptsDir,
-                args.patientId, chrom,
-                dnaNormalFilename, 
-                rnaNormalFilename,
-                dnaTumorFilename,
-                rnaTumorFilename,
-                dnaNormalFastaFilename, rnaNormalFastaFilename, dnaTumorFastaFilename, rnaTumorFastaFilename)
+                args.patientId, chrom)
+    if dnaNormalFilename != None:
+        cmd += " -n %s --dnaNormalFasta %s" % (dnaNormalFilename, dnaNormalFastaFilename)
         cmd = addNumsAndQuals(args, cmd, "dnaNormal")
-        cmd = addNumsAndQuals(args, cmd, "dnaTumor")
-        cmd = addNumsAndQuals(args, cmd, "rnaTumor")
+    if rnaNormalFilename != None:
+        cmd += " -x %s --rnaNormalFasta %s" % (rnaNormalFilename, rnaNormalFastaFilename)
         cmd = addNumsAndQuals(args, cmd, "rnaNormal")
-    # triplets
-    elif (rnaTumorFilename != None):
-        cmd = "python %s/radia.py %s %s -n %s -t %s -r %s --dnaNormalFasta %s --dnaTumorFasta %s --rnaTumorFasta %s " %(
-                args.scriptsDir,
-                args.patientId, chrom,
-                dnaNormalFilename,  
-                dnaTumorFilename, 
-                rnaTumorFilename, 
-                dnaNormalFastaFilename, dnaTumorFastaFilename, rnaTumorFastaFilename)
-        cmd = addNumsAndQuals(args, cmd, "dnaNormal")
+    if dnaTumorFilename != None:
+        cmd += " -t %s --dnaTumorFasta %s" % (dnaTumorFilename, dnaTumorFastaFilename)
         cmd = addNumsAndQuals(args, cmd, "dnaTumor")
+    if rnaTumorFilename != None:
+        cmd += " -r %s --rnaTumorFasta %s" % (rnaTumorFilename, rnaTumorFastaFilename)
         cmd = addNumsAndQuals(args, cmd, "rnaTumor")
-    # pairs
-    else:
-        cmd = "python %s/radia.py %s %s -n %s -t %s --dnaNormalFasta %s --dnaTumorFasta %s " % (
-                args.scriptsDir,
-                args.patientId, chrom,
-                dnaNormalFilename,
-                dnaTumorFilename,
-                dnaNormalFastaFilename, dnaTumorFastaFilename)
-        cmd = addNumsAndQuals(args, cmd, "dnaNormal")
-        cmd = addNumsAndQuals(args, cmd, "dnaTumor")
-
+    
     # determine naming for chromosomes (with or without 'chr') and mitochondrion (M or something starting with M)
     if dnaNormalFilename is not None:
         idx = idxStats(dnaNormalFilename)
@@ -390,7 +370,8 @@ def __main__():
             i_rnaTumorFilename = None
 
         radiaOuts = []
-        chroms = get_bam_seq(i_dnaNormalFilename)
+        bamfile = next(bam for bam in [i_dnaNormalFilename, i_dnaTumorFilename, i_rnaNormalFilename, i_rnaTumorFilename]  if bam is not None)
+        chroms = get_bam_seq(bamfile)
         if args.procs == 1:
             for chrom in chroms:
                 cmd, radiaOutput = radia(chrom, args, tempDir,  
